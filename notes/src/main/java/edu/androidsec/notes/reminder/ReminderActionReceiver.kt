@@ -3,6 +3,9 @@ package edu.androidsec.notes.reminder
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
+import androidx.core.app.NotificationManagerCompat
+import edu.androidsec.notes.appContainer
 
 /**
  * TODO(ipc-4): ресивер кнопки «Готово» в уведомлении.
@@ -23,13 +26,22 @@ import android.content.Intent
  *   -a edu.androidsec.notes.action.DONE` не должен ничего делать).
  */
 class ReminderActionReceiver : BroadcastReceiver() {
-
-    override fun onReceive(context: Context, intent: Intent) {
-    }
-
     companion object {
         const val TAG = "ReminderActionReceiver"
         const val ACTION_DONE = "edu.androidsec.notes.action.DONE"
         const val EXTRA_NOTE_ID = "edu.androidsec.notes.extra.NOTE_ID"
     }
+    override fun onReceive(
+        context: Context,
+        intent: Intent
+    ) {
+        if (intent.action != ACTION_DONE) return
+
+        val noteId = intent.getLongExtra(EXTRA_NOTE_ID, -1L)
+        if (noteId <= 0L || noteId > Int.MAX_VALUE) return
+
+        NotificationManagerCompat.from(context).cancel(noteId.toInt())
+        context.appContainer.reminderScheduler.cancel(noteId)
+    }
 }
+

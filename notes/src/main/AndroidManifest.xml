@@ -2,23 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- TODO(ipc-1): разрешения.
-         Лекция 5, блоки «Protection levels» и «Изменения 2020–2024: scoped storage, photo picker,
-         POST_NOTIFICATIONS»; проверяется шагом 1 чек-листа.
-
-         Ниже перечислены разрешения, которые могут показаться нужными. Раскомментируйте только те,
-         без которых приложение не работает; остальные оставьте закомментированными или удалите.
-         Напоминание показывается уведомлением; фото выбирается системным Photo Picker.
-
+    <!-- Разрешение для Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    -->
 
-    <!-- TODO(ipc-6): объявите здесь собственное разрешение
-         edu.androidsec.notes.permission.READ_NOTES с protectionLevel="signature"
-         (см. TitlesProvider.kt). -->
+    <!-- Собственное разрешение: только приложения с такой же подписью -->
+    <permission
+        android:name="edu.androidsec.notes.permission.READ_NOTES"
+        android:protectionLevel="signature" />
 
     <application
         android:name=".NotesApp"
@@ -28,35 +18,71 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Notes">
 
-        <!-- TODO(ipc-1): у КАЖДОГО компонента в итоговом (merged) манифесте должен быть явно
-             задан android:exported, а экспортированы только лаунчер, провайдер заголовков и
-             компоненты, закрытые разрешением уровня signature.
-             Merged manifest включает компоненты библиотек: посмотрите его во вкладке
-             Merged Manifest в Android Studio или командой scripts/check.sh manifest.
-             Для каждого экспортированного компонента библиотеки разберитесь, кто может его
-             вызвать. Ненужный компонент убирается через tools:node="remove"; на защите
-             объясните, почему убрали или оставили. -->
+        <!-- Главная Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- TODO(ipc-3): intent-filter для deep link notes://note/<id> (см. NoteDeepLink.kt). -->
+            <!-- Deep Link -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="notes"
+                    android:host="note" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="justannnnnn.github.io"
+                    android:pathPrefix="/note" />
+
+            </intent-filter>
+
         </activity>
 
-        <!-- TODO(ipc-4): объявите ресивер .reminder.ReminderActionReceiver, закрытый для других
-             приложений (см. ReminderActionReceiver.kt). -->
+        <!-- Ресивер кнопки "Готово" -->
+        <receiver
+            android:name=".reminder.ReminderActionReceiver"
+            android:exported="false" />
 
-        <!-- TODO(ipc-5): объявите androidx.core.content.FileProvider с authority
-             edu.androidsec.notes.files (см. ShareNote.kt). -->
+        <!-- FileProvider для экспорта файлов -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="edu.androidsec.notes.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
 
-        <!-- TODO(ipc-6): объявите провайдер .provider.TitlesProvider с authority
-             edu.androidsec.notes.provider, защищённый signature-разрешением
-             (см. TitlesProvider.kt). -->
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+
+        </provider>
+
+        <!-- Провайдер заголовков -->
+        <provider
+            android:name=".provider.TitlesProvider"
+            android:authorities="edu.androidsec.notes.provider"
+            android:exported="true"
+            android:readPermission="edu.androidsec.notes.permission.READ_NOTES"
+            android:writePermission="edu.androidsec.notes.permission.READ_NOTES" />
+
     </application>
 
 </manifest>

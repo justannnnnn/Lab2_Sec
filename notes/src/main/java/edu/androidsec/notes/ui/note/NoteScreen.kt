@@ -128,6 +128,20 @@ private fun NoteContent(
         ) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                state.notFound -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(text = stringResource(R.string.note_not_found))
+                        Button(onClick = onBack) {
+                            Text(stringResource(R.string.note_back))
+                        }
+                    }
+                }
                 else -> Column(
                     modifier = Modifier
                         .fillMaxSize()

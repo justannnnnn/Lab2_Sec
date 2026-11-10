@@ -26,6 +26,7 @@ data class NoteUiState(
     val title: String = "",
     val body: String = "",
     val photoPath: String? = null,
+    val notFound: Boolean = false
 ) {
     val isNew: Boolean get() = noteId == 0L
 
@@ -63,13 +64,18 @@ class NoteViewModel(
         viewModelScope.launch {
             val note = repository.get(noteId)
             if (note == null) {
-                // TODO(ipc-3): заметки с таким id нет (например, deep link на удалённую заметку).
                 // Сейчас открывается пустой редактор, как будто заметка существует, и «Сохранить»
                 // создаст запись с чужим id. Нужно показать сообщение «Заметка не найдена»
                 // (строки note_not_found* уже есть) и не дать редактировать несуществующую запись.
                 // Потребуется поле в NoteUiState и ветка в NoteScreen.
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        notFound = true
+                    )
+                }
                 return@launch
+
             }
             _uiState.update {
                 it.copy(
@@ -88,22 +94,30 @@ class NoteViewModel(
 
     fun save() {
         viewModelScope.launch {
-            val id = repository.save(_uiState.value.toNote())
-            _uiState.update { it.copy(noteId = id) }
+            val state = _uiState.value
+            if (state.notFound) return@launch
+            val id = repository.save(state.toNote())
+            _uiState.update {
+                it.copy(noteId = id)
+            }
             _events.send(NoteEvent.Message(R.string.note_saved))
         }
     }
 
+
     fun delete() {
         val state = _uiState.value
         viewModelScope.launch {
-            if (!state.isNew) {
+            if (!state.isNew && !state.notFound) {
                 repository.delete(state.noteId)
-                _events.send(NoteEvent.Message(R.string.note_deleted))
+                _events.send(
+                    NoteEvent.Message(R.string.note_deleted)
+                )
             }
             _events.send(NoteEvent.Close)
         }
     }
+
 
     /** Выбор фото вернул `content://`-URI: копируем файл к себе, право на чтение URI временное. */
     fun onPhotoPicked(uri: Uri) {

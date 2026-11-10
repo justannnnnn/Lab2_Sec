@@ -1,10 +1,16 @@
 package edu.androidsec.notes.reminder
 
+import android.Manifest
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import edu.androidsec.notes.MainActivity
 import edu.androidsec.notes.R
+import edu.androidsec.notes.deeplink.NoteDeepLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -33,6 +39,13 @@ class ReminderScheduler(
     private val context: Context,
     private val scope: CoroutineScope,
 ) {
+    companion object {
+        const val TAG = "ReminderScheduler"
+        /** Id канала фиксирован заданием. */
+        const val CHANNEL_ID = "reminders"
+        const val DEFAULT_DELAY_MILLIS = 10_000L
+    }
+
     private val jobs = HashMap<Long, Job>()
 
     fun schedule(noteId: Long, title: String, delayMillis: Long = DEFAULT_DELAY_MILLIS) {
@@ -50,27 +63,63 @@ class ReminderScheduler(
         synchronized(jobs) { jobs.remove(noteId)?.cancel() }
     }
 
-    private fun showNotification(noteId: Long, title: String) {
-        if (!context.hasNotificationPermission()) {
-            Log.w(TAG, "POST_NOTIFICATIONS not granted, reminder for note $noteId dropped")
-            return
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+    private fun showNotification(
+        noteId: Long,
+        title: String
+    ) {
+        if (!context.hasNotificationPermission()) return
+
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            data = NoteDeepLink.uriFor(noteId)
         }
+
+        val openPendingIntent = PendingIntent.getActivity(
+            context,
+            noteId.toInt(),
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val doneIntent = Intent(
+            context,
+            ReminderActionReceiver::class.java
+        ).apply {
+            action = ReminderActionReceiver.ACTION_DONE
+            putExtra(
+                ReminderActionReceiver.EXTRA_NOTE_ID,
+                noteId
+            )
+        }
+
+        val donePendingIntent = PendingIntent.getBroadcast(
+            context,
+            noteId.toInt(),
+            doneIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                PendingIntent.FLAG_IMMUTABLE
+        )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(context.getString(R.string.reminder_notification_title))
+            .setContentTitle(
+                context.getString(R.string.reminder_notification_title)
+            )
             .setContentText(title)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
+            .setContentIntent(openPendingIntent)
+            .addAction(
+                0,
+                context.getString(R.string.reminder_action_done),
+                donePendingIntent
+            )
             .build()
 
-        NotificationManagerCompat.from(context).notify(noteId.toInt(), notification)
-    }
-
-    companion object {
-        const val TAG = "ReminderScheduler"
-        /** Id канала фиксирован заданием. */
-        const val CHANNEL_ID = "reminders"
-        const val DEFAULT_DELAY_MILLIS = 10_000L
+        NotificationManagerCompat
+            .from(context)
+            .notify(noteId.toInt(), notification)
     }
 }

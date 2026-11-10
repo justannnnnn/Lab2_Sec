@@ -1,9 +1,10 @@
 package edu.androidsec.notes.photo
 
 import android.net.Uri
-import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
 /**
  * TODO(ipc-2): выбор фото без разрешений на медиафайлы.
@@ -19,9 +20,21 @@ import androidx.compose.ui.platform.LocalContext
  * Сейчас это заглушка: показывает Toast.
  */
 @Composable
-fun rememberPhotoPicker(onPicked: (Uri) -> Unit): () -> Unit {
-    val context = LocalContext.current
+fun rememberPhotoPicker(
+    onPicked: (Uri) -> Unit
+): () -> Unit {
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let(onPicked)
+    }
+
     return {
-        Toast.makeText(context, "TODO(ipc-2): системный выбор фото", Toast.LENGTH_SHORT).show()
+        launcher.launch(
+            PickVisualMediaRequest(
+                ActivityResultContracts.PickVisualMedia.ImageOnly
+            )
+        )
     }
 }

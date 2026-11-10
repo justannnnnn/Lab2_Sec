@@ -32,7 +32,9 @@ fun NotesNavHost(
     LaunchedEffect(incomingValue) {
         when (val value = incomingValue) {
             is IncomingNote.Open -> {
-                navController.navigate(NoteRoute(value.id))
+                navController.navigate(NoteRoute(value.id)) {
+                    launchSingleTop = true
+                }
                 onIncomingConsumed()
             }
 

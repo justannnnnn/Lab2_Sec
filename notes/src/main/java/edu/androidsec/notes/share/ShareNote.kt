@@ -1,9 +1,12 @@
 package edu.androidsec.notes.share
 
+import android.content.ClipData
 import android.content.Context
-import android.widget.Toast
+import android.content.Intent
+import androidx.core.content.FileProvider
+import edu.androidsec.notes.R
 import edu.androidsec.notes.domain.Note
-import java.io.File
+import edu.androidsec.notes.share.ShareNote.AUTHORITY
 
 /**
  * TODO(ipc-5): экспорт заметки файлом через FileProvider.
@@ -30,9 +33,27 @@ import java.io.File
 object ShareNote {
     const val AUTHORITY = "edu.androidsec.notes.files"
 
-    fun shareNoteAsFile(context: Context, note: Note): File {
+    fun shareNoteAsFile(
+        context: Context,
+        note: Note
+    ) {
         val file = NoteExporter.export(context, note)
-        Toast.makeText(context, "TODO(ipc-5): отправить ${file.name} через FileProvider", Toast.LENGTH_SHORT).show()
-        return file
+        val uri = FileProvider.getUriForFile(context, AUTHORITY, file)
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newUri(
+                context.contentResolver,
+                file.name,
+                uri
+            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        val chooser = Intent.createChooser(
+            sendIntent,
+            context.getString(R.string.share_chooser_title)
+        )
+        context.startActivity(chooser)
     }
 }

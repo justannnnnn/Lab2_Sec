@@ -39,10 +39,37 @@ object NoteDeepLink {
     const val SCHEME = "notes"
     const val HOST = "note"
 
+    const val APP_LINK_HOST = "justannnnnn.github.io"
+
     /** Ссылка на заметку в фиксированном формате `notes://note/<id>`. */
     fun uriFor(noteId: Long): Uri = "$SCHEME://$HOST/$noteId".toUri()
 
     fun parse(intent: Intent?): IncomingNote {
-        return IncomingNote.None
+        val uri = intent?.data ?: return IncomingNote.None
+
+        if (intent.action != Intent.ACTION_VIEW || uri.query != null || uri.fragment != null) {
+            return IncomingNote.Invalid
+        }
+
+        val segments = uri.pathSegments
+
+        val idString = when {
+            uri.scheme == SCHEME && uri.host == HOST && segments.size == 1 -> {
+                segments[0]
+            }
+
+            uri.scheme == "https" && uri.host == APP_LINK_HOST && segments.size == 2 && segments[0] == "note" -> {
+                segments[1]
+            }
+
+            else -> return IncomingNote.Invalid
+        }
+
+        if (!idString.matches(Regex("[0-9]+"))) return IncomingNote.Invalid
+
+        val id = idString.toLongOrNull() ?: return IncomingNote.Invalid
+        if (id <= 0L) return IncomingNote.Invalid
+
+        return IncomingNote.Open(id)
     }
 }
