@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.androidsec.notes.R
 import edu.androidsec.notes.data.NotesRepository
+import edu.androidsec.notes.data.db.DeleteCoordinator
 import edu.androidsec.notes.domain.Note
 import edu.androidsec.notes.photo.PhotoStore
 import edu.androidsec.notes.reminder.ReminderScheduler
@@ -25,12 +26,21 @@ data class NoteUiState(
     val isLoading: Boolean = true,
     val title: String = "",
     val body: String = "",
+    val tags: String = "",
     val photoPath: String? = null,
-    val notFound: Boolean = false
+    val notFound: Boolean = false,
+    val isSecret: Boolean = false
 ) {
     val isNew: Boolean get() = noteId == 0L
 
-    fun toNote(): Note = Note(id = noteId, title = title, body = body, photoPath = photoPath)
+    fun toNote(): Note = Note(
+        id = noteId,
+        title = title,
+        body = body,
+        photoPath = photoPath,
+        tags = tags,
+        isSecret = isSecret
+    )
 }
 
 /** Одноразовые события для экрана: показать сообщение или закрыть экран. */
@@ -44,6 +54,7 @@ class NoteViewModel(
     private val repository: NotesRepository,
     private val photoStore: PhotoStore,
     private val reminderScheduler: ReminderScheduler,
+    private val deleteCoordinator: DeleteCoordinator,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NoteUiState(noteId = noteId))
@@ -83,6 +94,8 @@ class NoteViewModel(
                     title = note.title,
                     body = note.body,
                     photoPath = note.photoPath,
+                    tags = note.tags,
+                    isSecret = note.isSecret
                 )
             }
         }
@@ -92,6 +105,7 @@ class NoteViewModel(
 
     fun onBodyChange(value: String) = _uiState.update { it.copy(body = value) }
 
+    fun onSecretChange(value: Boolean) = _uiState.update { it.copy(isSecret = value) }
     fun save() {
         viewModelScope.launch {
             val state = _uiState.value
@@ -107,13 +121,12 @@ class NoteViewModel(
 
     fun delete() {
         val state = _uiState.value
+
         viewModelScope.launch {
             if (!state.isNew && !state.notFound) {
-                repository.delete(state.noteId)
-                _events.send(
-                    NoteEvent.Message(R.string.note_deleted)
-                )
+                deleteCoordinator.requestDelete(state.noteId)
             }
+
             _events.send(NoteEvent.Close)
         }
     }
@@ -131,13 +144,21 @@ class NoteViewModel(
         }
     }
 
+    fun onTagsChange(value: String) = _uiState.update { it.copy(tags = value) }
+
     fun removePhoto() = _uiState.update { it.copy(photoPath = null) }
 
     /** Вызывается экраном, когда разрешение на уведомления уже получено. */
     fun scheduleReminder() {
         val state = _uiState.value
         if (state.isNew) return
-        reminderScheduler.schedule(state.noteId, state.title)
+
+        reminderScheduler.schedule(
+            noteId = state.noteId,
+            title = state.title,
+            isSecret = state.isSecret
+        )
+
         _events.trySend(NoteEvent.Message(R.string.reminder_scheduled))
     }
 

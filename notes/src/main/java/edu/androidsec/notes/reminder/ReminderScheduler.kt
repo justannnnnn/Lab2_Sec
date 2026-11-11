@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Планировщик напоминаний. Для лабораторной достаточно задержки в корутине уровня процесса:
@@ -48,12 +49,22 @@ class ReminderScheduler(
 
     private val jobs = HashMap<Long, Job>()
 
-    fun schedule(noteId: Long, title: String, delayMillis: Long = DEFAULT_DELAY_MILLIS) {
-        val text = title.ifBlank { context.getString(R.string.note_untitled) }
+    fun schedule(
+        noteId: Long,
+        title: String,
+        isSecret: Boolean = false,
+        delayMillis: Long = DEFAULT_DELAY_MILLIS
+    ) {
+        val text = if (isSecret) {
+            context.getString(R.string.reminder_secret_note)
+        } else {
+            title.ifBlank { context.getString(R.string.note_untitled) }
+        }
+
         synchronized(jobs) {
             jobs.remove(noteId)?.cancel()
             jobs[noteId] = scope.launch {
-                delay(delayMillis)
+                delay(delayMillis.milliseconds)
                 showNotification(noteId, text)
             }
         }

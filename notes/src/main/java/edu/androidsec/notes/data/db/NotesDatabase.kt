@@ -4,9 +4,14 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [NoteEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [NoteEntity::class],
+    version = 3,
+    exportSchema = false
+)
 abstract class NotesDatabase : RoomDatabase() {
 
     abstract fun noteDao(): NoteDao
@@ -14,16 +19,36 @@ abstract class NotesDatabase : RoomDatabase() {
     companion object {
         private const val NAME = "notes.db"
 
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE notes ADD COLUMN tags TEXT NOT NULL DEFAULT ''"
+                )
+                db.execSQL(
+                    "ALTER TABLE notes ADD COLUMN is_secret INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE notes ADD COLUMN is_pending_delete INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
         fun create(context: Context): NotesDatabase =
-            Room.databaseBuilder(context.applicationContext, NotesDatabase::class.java, NAME)
+            Room.databaseBuilder(
+                context.applicationContext,
+                NotesDatabase::class.java,
+                NAME
+            )
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(SeedCallback)
                 .build()
     }
 
-    /**
-     * Стартовые данные: три заметки с id 1, 2, 3, чтобы ссылке `notes://note/1`
-     * было что открывать сразу после установки.
-     */
     private object SeedCallback : Callback() {
         override fun onCreate(db: SupportSQLiteDatabase) {
             val now = System.currentTimeMillis()

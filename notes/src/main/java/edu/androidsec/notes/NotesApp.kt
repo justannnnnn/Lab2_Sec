@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import edu.androidsec.notes.di.AppContainer
 import edu.androidsec.notes.reminder.ReminderScheduler
+import kotlinx.coroutines.launch
 
 class NotesApp : Application() {
 
@@ -13,6 +14,9 @@ class NotesApp : Application() {
     override fun onCreate() {
         super.onCreate()
         createReminderChannel()
+        container.appScope.launch {
+            container.notesRepository.finalizeAllPendingDeletes()
+        }
     }
 
     /** Канал уведомлений создаётся один раз при старте; id канала фиксирован заданием. */

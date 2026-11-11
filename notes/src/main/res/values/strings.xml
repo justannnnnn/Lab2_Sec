@@ -38,6 +38,7 @@
     <string name="reminder_notification_title">Напоминание</string>
     <string name="reminder_scheduled">Напоминание придёт через 10 секунд</string>
     <string name="reminder_action_done">Готово</string>
+    <string name="reminder_secret_note">У вас есть секретная заметка</string>
     <string name="reminder_done_toast">Напоминание закрыто</string>
     <string name="permission_rationale_title">Нужно разрешение на уведомления</string>
     <string name="permission_rationale_text">Напоминание показывается уведомлением. Без разрешения приложение продолжит работать, но напомнить не сможет.</string>
@@ -48,6 +49,7 @@
     <string name="permission_settings_text">Система больше не покажет запрос. Включить уведомления можно в настройках приложения.</string>
     <string name="permission_settings_open">Открыть настройки</string>
     <string name="permission_settings_cancel">Закрыть</string>
+
 
     <!-- Экспорт -->
     <string name="share_chooser_title">Отправить заметку</string>

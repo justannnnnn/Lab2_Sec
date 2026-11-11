@@ -3,6 +3,7 @@ package edu.androidsec.notes.di
 import android.content.Context
 import edu.androidsec.notes.data.NotesRepository
 import edu.androidsec.notes.data.RoomNotesRepository
+import edu.androidsec.notes.data.db.DeleteCoordinator
 import edu.androidsec.notes.data.db.NotesDatabase
 import edu.androidsec.notes.photo.PhotoStore
 import edu.androidsec.notes.reminder.ReminderScheduler
@@ -26,4 +27,8 @@ class AppContainer(context: Context) {
     val photoStore: PhotoStore by lazy { PhotoStore(appContext) }
 
     val reminderScheduler: ReminderScheduler by lazy { ReminderScheduler(appContext, appScope) }
+
+    val deleteCoordinator: DeleteCoordinator by lazy {
+        DeleteCoordinator(notesRepository)
+    }
 }

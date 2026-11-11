@@ -5,9 +5,10 @@ data class Note(
     val id: Long = 0L,
     val title: String = "",
     val body: String = "",
-    /** Абсолютный путь к копии фото во внутреннем хранилище приложения или null. */
     val photoPath: String? = null,
     val updatedAt: Long = 0L,
+    val tags: String = "",
+    val isSecret: Boolean = false,
 ) {
     val isNew: Boolean get() = id == 0L
 }
