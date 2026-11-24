@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -31,11 +33,14 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +54,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.androidsec.notes.R
 import edu.androidsec.notes.appContainer
 import edu.androidsec.notes.domain.Note
+import edu.androidsec.notes.domain.NoteSortOrder
 import edu.androidsec.notes.ui.navigation.NoteRoute
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
@@ -62,11 +71,14 @@ fun NotesListScreen(onOpenNote: (Long) -> Unit) {
 
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
 
     NotesListContent(
         notes = notes,
         searchQuery = searchQuery,
+        sortOrder = sortOrder,
         onSearchQueryChange = viewModel::onSearchQueryChange,
+        onSortOrderChange = viewModel::onSortOrderChange,
         onOpen = onOpenNote,
         onAdd = { onOpenNote(NoteRoute.NEW_NOTE_ID) },
         onDelete = viewModel::delete,
@@ -79,12 +91,21 @@ private fun NotesListContent(
     modifier: Modifier = Modifier,
     notes: List<Note>?,
     searchQuery: String,
+    sortOrder: NoteSortOrder,
     onSearchQueryChange: (String) -> Unit,
+    onSortOrderChange: (NoteSortOrder) -> Unit,
     onOpen: (Long) -> Unit,
     onAdd: () -> Unit,
     onDelete: (Long) -> Unit,
 ) {
     val searchState = rememberTextFieldState(initialText = searchQuery)
+    var sortMenuExpanded by remember { mutableStateOf(false) }
+
+    val sortLabel = when (sortOrder) {
+        NoteSortOrder.UPDATED_NEWEST -> "Сначала новые"
+        NoteSortOrder.UPDATED_OLDEST -> "Сначала старые"
+        NoteSortOrder.TITLE_ASC -> "По названию"
+    }
 
     LaunchedEffect(searchQuery) {
         if (searchState.text.toString() != searchQuery) {
@@ -129,6 +150,59 @@ private fun NotesListContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Сортировка:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Box {
+                    TextButton(
+                        onClick = {
+                            sortMenuExpanded = true
+                        }
+                    ) {
+                        Text(sortLabel)
+                    }
+
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = {
+                            sortMenuExpanded = false
+                        }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Сначала новые") },
+                            onClick = {
+                                onSortOrderChange(NoteSortOrder.UPDATED_NEWEST)
+                                sortMenuExpanded = false
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Сначала старые") },
+                            onClick = {
+                                onSortOrderChange(NoteSortOrder.UPDATED_OLDEST)
+                                sortMenuExpanded = false
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("По названию") },
+                            onClick = {
+                                onSortOrderChange(NoteSortOrder.TITLE_ASC)
+                                sortMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Box(
                 modifier = Modifier

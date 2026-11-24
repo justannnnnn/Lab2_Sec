@@ -58,4 +58,52 @@ interface NoteDao {
 
     @Query("SELECT id, title FROM notes ORDER BY id")
     fun titlesBlocking(): List<NoteTitle>
+
+    // Сначала новые
+    @Query(
+        """
+        SELECT * FROM notes
+        WHERE is_pending_delete = 0
+          AND (
+              :query = ''
+              OR title LIKE '%' || :query || '%' ESCAPE '\'
+              OR body LIKE '%' || :query || '%' ESCAPE '\'
+              OR tags LIKE '%' || :query || '%' ESCAPE '\'
+          )
+        ORDER BY updated_at DESC
+        """
+    )
+    fun searchNewest(query: String): Flow<List<NoteEntity>>
+
+    // Сначала старые
+    @Query(
+        """
+        SELECT * FROM notes
+        WHERE is_pending_delete = 0
+          AND (
+              :query = ''
+              OR title LIKE '%' || :query || '%' ESCAPE '\'
+              OR body LIKE '%' || :query || '%' ESCAPE '\'
+              OR tags LIKE '%' || :query || '%' ESCAPE '\'
+          )
+        ORDER BY updated_at ASC
+        """
+    )
+    fun searchOldest(query: String): Flow<List<NoteEntity>>
+
+    // По названию
+    @Query(
+        """
+        SELECT * FROM notes
+        WHERE is_pending_delete = 0
+          AND (
+              :query = ''
+              OR title LIKE '%' || :query || '%' ESCAPE '\'
+              OR body LIKE '%' || :query || '%' ESCAPE '\'
+              OR tags LIKE '%' || :query || '%' ESCAPE '\'
+          )
+        ORDER BY title ASC
+        """
+    )
+    fun searchByTitle(query: String): Flow<List<NoteEntity>>
 }

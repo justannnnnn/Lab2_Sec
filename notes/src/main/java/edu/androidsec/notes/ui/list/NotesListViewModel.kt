@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import edu.androidsec.notes.data.NotesRepository
 import edu.androidsec.notes.data.db.DeleteCoordinator
 import edu.androidsec.notes.domain.Note
+import edu.androidsec.notes.domain.NoteSortOrder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -28,19 +30,29 @@ class NotesListViewModel(
     private val _searchQuery = MutableStateFlow("")
 
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    private val _sortOrder = MutableStateFlow(NoteSortOrder.UPDATED_NEWEST)
+    val sortOrder: StateFlow<NoteSortOrder> = _sortOrder.asStateFlow()
+
+    fun onSortOrderChange(sortOrder: NoteSortOrder) { _sortOrder.value = sortOrder }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    val notes: StateFlow<List<Note>?> = _searchQuery
-        .debounce(250.milliseconds)
-        .distinctUntilChanged()
-        .flatMapLatest { query ->
-            repository.search(query)
+    val notes: StateFlow<List<Note>?> =
+        combine(
+            _searchQuery
+                .debounce(250.milliseconds)
+                .distinctUntilChanged(),
+            _sortOrder
+        ) { query, sortOrder ->
+            query to sortOrder
         }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
-            initialValue = null
-        )
+            .flatMapLatest { (query, sortOrder) ->
+                repository.search(query, sortOrder)
+            }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
+            )
 
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query

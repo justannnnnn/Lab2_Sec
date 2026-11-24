@@ -4,6 +4,7 @@ import edu.androidsec.notes.data.db.NoteDao
 import edu.androidsec.notes.data.db.toDomain
 import edu.androidsec.notes.data.db.toEntity
 import edu.androidsec.notes.domain.Note
+import edu.androidsec.notes.domain.NoteSortOrder
 import edu.androidsec.notes.domain.NoteValidationRules
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -11,9 +12,13 @@ import kotlinx.coroutines.flow.map
 /** Порт доступа к заметкам. ViewModel-и зависят только от него. */
 interface NotesRepository {
     fun observeAll(): Flow<List<Note>>
-    fun search(query: String): Flow<List<Note>>
+
+    fun search(
+        query: String,
+        sortOrder: NoteSortOrder = NoteSortOrder.UPDATED_NEWEST
+    ): Flow<List<Note>>
+
     suspend fun get(id: Long): Note?
-    /** Сохраняет заметку и возвращает её id (для новой заметки — только что выданный). */
     suspend fun save(note: Note): Long
 
     suspend fun markPendingDelete(id: Long)
@@ -31,13 +36,27 @@ class RoomNotesRepository(
             list.map { it.toDomain() }
         }
 
-    override fun search(query: String): Flow<List<Note>> {
+    override fun search(
+        query: String,
+        sortOrder: NoteSortOrder
+    ): Flow<List<Note>> {
         val escapedQuery = query.trim()
             .replace("\\", "\\\\")
             .replace("%", "\\%")
             .replace("_", "\\_")
 
-        return dao.search(escapedQuery).map { list ->
+        val result = when (sortOrder) {
+            NoteSortOrder.UPDATED_NEWEST ->
+                dao.searchNewest(escapedQuery)
+
+            NoteSortOrder.UPDATED_OLDEST ->
+                dao.searchOldest(escapedQuery)
+
+            NoteSortOrder.TITLE_ASC ->
+                dao.searchByTitle(escapedQuery)
+        }
+
+        return result.map { list ->
             list.map { it.toDomain() }
         }
     }
